@@ -10,7 +10,7 @@
 
 如果你希望在编写Rust程序方面有一个漫长而愉快的职业生涯,你现在应该回过头来忘记你曾经看过这本书.没有必要.但是,如果你打算编写不安全的代码--或者只是想深入研究语言的内容--本书包含大量有用的信息.
 
-与[The Rust Programming Language](https://github.com/rust-lang-nursery/nomicon/blob/master/book/index.html)不同,我们将假设相当多的先验知识.特别是,您应该熟悉基本的系统编程和Rust.如果你对这些主题感到不舒服,则应首先考虑阅读[这本书](https://doc.rust-lang.org/book/index.html).也就是说,我们不会假设你已经阅读过,我们会在适当的情况下偶尔回顾一下基础知识.如果你愿意,你可以直接跳到这本书;要知道我们不会从头开始解释一切.
+与[The Rust Programming Language](https://github.com/rust-lang-nursery/nomicon/blob/master/book/index.html)不同,我们将假设相当多的先验知识.特别是,你应该熟悉基本的系统编程和Rust.如果你对这些主题感到不舒服,则应首先考虑阅读[这本书](https://doc.rust-lang.org/book/index.html).也就是说,我们不会假设你已经阅读过,我们会在适当的情况下偶尔回顾一下基础知识.如果你愿意,你可以直接跳到这本书;要知道我们不会从头开始解释一切.
 
 我们将深入研究异常安全(exception-safety),指针别名(pointer aliasing),内存模型(memory models),编译器和硬件实现细节,甚至一些类型理论(type-theory).许多文本将专门讨论没有人*应该(should)* 关心的奇特的角落案例,但突然变得重要,因为我们写`unsafe`.
 
