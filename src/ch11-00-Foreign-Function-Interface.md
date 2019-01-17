@@ -66,7 +66,7 @@ extern {
 # fn main() {}
 ```
 
-# 创建以恶安全接口(Creating a safe interface)
+# 创建一个安全接口(Creating a safe interface)
 
 原始C API需要被包装以提供内存安全性并使用更高级别的概念,如向量.库可以选择仅公开安全的高级接口,并隐藏不安全的内部细节.
 
