@@ -3,6 +3,7 @@
 ```Rust
 #![feature(ptr_internals)]
 #![feature(allocator_api)]
+#![feature(alloc_layout_extra)]
 
 use std::ptr::{Unique, NonNull, self};
 use std::mem;
@@ -187,4 +188,194 @@ impl<T> DerefMut for Vec<T> {
         }
     }
 }
+
+
+
+
+
+struct RawValIter<T> {
+    start: *const T,
+    end: *const T,
+}
+
+impl<T> RawValIter<T> {
+    unsafe fn new(slice: &[T]) -> Self {
+        RawValIter {
+            start: slice.as_ptr(),
+            end: if mem::size_of::<T>() == 0 {
+                ((slice.as_ptr() as usize) + slice.len()) as *const _
+            } else if slice.len() == 0 {
+                slice.as_ptr()
+            } else {
+                slice.as_ptr().offset(slice.len() as isize)
+            }
+        }
+    }
+}
+
+impl<T> Iterator for RawValIter<T> {
+    type Item = T;
+    fn next(&mut self) -> Option<T> {
+        if self.start == self.end {
+            None
+        } else {
+            unsafe {
+                let result = ptr::read(self.start);
+                self.start = if mem::size_of::<T>() == 0 {
+                    (self.start as usize + 1) as *const _
+                } else {
+                    self.start.offset(1)
+                };
+                Some(result)
+            }
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let elem_size = mem::size_of::<T>();
+        let len = (self.end as usize - self.start as usize)
+                  / if elem_size == 0 { 1 } else { elem_size };
+        (len, Some(len))
+    }
+}
+
+impl<T> DoubleEndedIterator for RawValIter<T> {
+    fn next_back(&mut self) -> Option<T> {
+        if self.start == self.end {
+            None
+        } else {
+            unsafe {
+                self.end = if mem::size_of::<T>() == 0 {
+                    (self.end as usize - 1) as *const _
+                } else {
+                    self.end.offset(-1)
+                };
+                Some(ptr::read(self.end))
+            }
+        }
+    }
+}
+
+
+
+
+pub struct IntoIter<T> {
+    _buf: RawVec<T>, // we don't actually care about this. Just need it to live.
+    iter: RawValIter<T>,
+}
+
+impl<T> Iterator for IntoIter<T> {
+    type Item = T;
+    fn next(&mut self) -> Option<T> { self.iter.next() }
+    fn size_hint(&self) -> (usize, Option<usize>) { self.iter.size_hint() }
+}
+
+impl<T> DoubleEndedIterator for IntoIter<T> {
+    fn next_back(&mut self) -> Option<T> { self.iter.next_back() }
+}
+
+impl<T> Drop for IntoIter<T> {
+    fn drop(&mut self) {
+        for _ in &mut *self {}
+    }
+}
+
+
+
+
+pub struct Drain<'a, T: 'a> {
+    vec: PhantomData<&'a mut Vec<T>>,
+    iter: RawValIter<T>,
+}
+
+impl<'a, T> Iterator for Drain<'a, T> {
+    type Item = T;
+    fn next(&mut self) -> Option<T> { self.iter.next() }
+    fn size_hint(&self) -> (usize, Option<usize>) { self.iter.size_hint() }
+}
+
+impl<'a, T> DoubleEndedIterator for Drain<'a, T> {
+    fn next_back(&mut self) -> Option<T> { self.iter.next_back() }
+}
+
+impl<'a, T> Drop for Drain<'a, T> {
+    fn drop(&mut self) {
+        // pre-drain the iter
+        for _ in &mut self.iter {}
+    }
+}
+
+# fn main() {
+#     tests::create_push_pop();
+#     tests::iter_test();
+#     tests::test_drain();
+#     tests::test_zst();
+#     println!("All tests finished OK");
+# }
+
+# mod tests {
+#     use super::*;
+#     pub fn create_push_pop() {
+#         let mut v = Vec::new();
+#         v.push(1);
+#         assert_eq!(1, v.len());
+#         assert_eq!(1, v[0]);
+#         for i in v.iter_mut() {
+#             *i += 1;
+#         }
+#         v.insert(0, 5);
+#         let x = v.pop();
+#         assert_eq!(Some(2), x);
+#         assert_eq!(1, v.len());
+#         v.push(10);
+#         let x = v.remove(0);
+#         assert_eq!(5, x);
+#         assert_eq!(1, v.len());
+#     }
+#
+#     pub fn iter_test() {
+#         let mut v = Vec::new();
+#         for i in 0..10 {
+#             v.push(Box::new(i))
+#         }
+#         let mut iter = v.into_iter();
+#         let first = iter.next().unwrap();
+#         let last = iter.next_back().unwrap();
+#         drop(iter);
+#         assert_eq!(0, *first);
+#         assert_eq!(9, *last);
+#     }
+#
+#     pub fn test_drain() {
+#         let mut v = Vec::new();
+#         for i in 0..10 {
+#             v.push(Box::new(i))
+#         }
+#         {
+#             let mut drain = v.drain();
+#             let first = drain.next().unwrap();
+#             let last = drain.next_back().unwrap();
+#             assert_eq!(0, *first);
+#             assert_eq!(9, *last);
+#         }
+#         assert_eq!(0, v.len());
+#         v.push(Box::new(1));
+#         assert_eq!(1, *v.pop().unwrap());
+#     }
+#
+#     pub fn test_zst() {
+#         let mut v = Vec::new();
+#         for _i in 0..10 {
+#             v.push(())
+#         }
+#
+#         let mut count = 0;
+#
+#         for _ in v.into_iter() {
+#             count += 1
+#         }
+#
+#         assert_eq!(10, count);
+#     }
+# }
 ```
