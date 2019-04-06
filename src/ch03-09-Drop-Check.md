@@ -16,29 +16,36 @@ let y;
 }
 ```
 
-每个都创造自己的作用域,明确地确定一个先于另一个删除.但是,如果我们以下这样做怎么样?
+还有一些更复杂的情况是不可能使用作用域来解糖的,但是仍然定义了顺序--变量按其定义的相反顺序删除,结构和元组的字段按其定义顺序删除. 在[rfc1875](https://github.com/rust-lang/rfcs/blob/master/text/1857-stabilize-drop-order.md)中有更多关于删除顺序的细节.
+
+我们这样做:
 
 ```Rust
-let (x, y) = (vec![], vec![]);
+let tuple  = (vec![], vec![]);
 ```
 
-这个值是否严格活得超过另一个?答案实际上是 *否定的(no)* ,两个值都没有严格活得超过另一个.当然,x或y中的一个将在另一个之前被删除,但是没有指定实际的顺序.元组在这方面并不特别;复合结构只是不保证它们的析构顺序,如Rust 1.0.
-
-我们 *可以(could)* 为元组和结构等内置组合的字段指定它.然而,像Vec这样的东西呢?Vec必须通过纯库代码手动删除其元素.一般来说,任何实现Drop的东西都有机会在最后的丧钟期间摆弄它的内部结构.因此,编译器无法充分推理实现Drop的任何类型的内容的实际析构顺序.
+左vector首先被丢弃. 但这是否意味着,在借用检查器的眼里,右边的那个活得更久呢?这个问题的答案是 *no* . 借用检查器可以单独跟踪元组的字段,但是对于vector元素,它仍然无法决定哪些元素会比哪些元素更活得更久,这些元素是通过纯库代码手动删除的,借用检查器无法理解.
 
 那我们为什么要关心呢?我们关心,因为如果类型系统不小心,它可能会意外地制造悬空指针.考虑以下简单程序:
 
 ```Rust
 struct Inspector<'a>(&'a u8);
 
+struct World<'a> {
+    inspector: Option<Inspector<'a>>,
+    days: Box<u8>,
+}
+
 fn main() {
-    let (inspector, days);
-    days = Box::new(1);
-    inspector = Inspector(&days);
+    let mut world = World {
+        inspector: None,
+        days: Box::new(1),
+    };
+    world.inspector = Some(Inspector(&world.days));
 }
 ```
 
-这个程序现在完全合理,正常编译.事实上`days`没有 *严格(strictly)* 活得超过`inspector`并不重要.只要`inspector`还活着,days也是如此.
+这个程序现在完全合理,正常编译.事实上`days`没有严格活得超过`inspector`并不重要.只要`inspector`还活着,`days`也是如此.
 
 但是如果我们添加一个析构函数,程序将不再编译!
 
@@ -51,29 +58,36 @@ impl<'a> Drop for Inspector<'a> {
     }
 }
 
+struct World<'a> {
+    inspector: Option<Inspector<'a>>,
+    days: Box<u8>,
+}
+
 fn main() {
-    let (inspector, days);
-    days = Box::new(1);
-    inspector = Inspector(&days);
+    let mut world = World {
+        inspector: None,
+        days: Box::new(1),
+    };
+    world.inspector = Some(Inspector(&world.days));
     // Let's say `days` happens to get dropped first.
     // Then when Inspector is dropped, it will try to read free'd memory!
 }
 ```
 
 ```Rust
-error[E0597]: `days` does not live long enough
-  --> src/main.rs:12:28
+error[E0597]: `world.days` does not live long enough
+  --> src/main.rs:20:39
    |
-12 |     inspector = Inspector(&days);
-   |                            ^^^^ borrowed value does not live long enough
+12 |      world.inspector = Some(Inspector(&world.days));
+   |                                       ^^^^^^^^^^ borrowed value does not live long enough
 ...
-15 | }
-   | - `days` dropped here while still borrowed
+23 | }
+   | - `world.days` dropped here while still borrowed
    |
    = note: values in a scope are dropped in the opposite order they are created
-
-error: aborting due to previous error
 ```
+
+你可以尝试更改字段的顺序或使用元组而不是结构,它仍然无法编译.
 
 实现`Drop`可让`Inspector`在其死亡期间执行一些任意代码.这意味着它可以潜在地观察那些应该活着的类型,只要它实际上首先被销毁.
 
@@ -83,7 +97,7 @@ error: aborting due to previous error
 
 遵守这一规则(通常)是满足借用检查器所必需的;遵守它是充分,但非必要的对于健全来说.也就是说,如果你的类型服从这个规则那么它肯定是删除合理的.
 
-满足上述规则并不总是必要的,原因是某些Drop实现不会访问借用的数据,即使它们的类型赋予它们这种访问的能力.
+满足上述规则并不总是必要的,原因是某些Drop实现不会访问借用的数据,即使它们的类型赋予它们这种访问的能力,或者因为我们知道特定的删除顺序,借用的数据仍然很好,即使借用检查器不知道这一点.
 
 例如,上述`Inspector`示例的此变体将永远不会访问借用的数据:
 
@@ -96,10 +110,17 @@ impl<'a> Drop for Inspector<'a> {
     }
 }
 
+struct World<'a> {
+    inspector: Option<Inspector<'a>>,
+    days: Box<u8>,
+}
+
 fn main() {
-    let (inspector, days);
-    days = Box::new(1);
-    inspector = Inspector(&days, "gadget");
+    let mut world = World {
+        inspector: None,
+        days: Box::new(1),
+    };
+    world.inspector = Some(Inspector(&world.days, "gadget"));
     // Let's say `days` happens to get dropped first.
     // Even when Inspector is dropped, its destructor will not access the
     // borrowed `days`.
@@ -109,20 +130,25 @@ fn main() {
 同样,此变体也永远不会访问借来的数据:
 
 ```Rust
-use std::fmt;
+struct Inspector<T>(T, &'static str);
 
-struct Inspector<T: fmt::Display>(T, &'static str);
-
-impl<T: fmt::Display> Drop for Inspector<T> {
+impl<T> Drop for Inspector<T> {
     fn drop(&mut self) {
         println!("Inspector(_, {}) knows when *not* to inspect.", self.1);
     }
 }
 
+struct World<T> {
+    inspector: Option<Inspector<T>>,
+    days: Box<u8>,
+}
+
 fn main() {
-    let (inspector, days): (Inspector<&u8>, Box<u8>);
-    days = Box::new(1);
-    inspector = Inspector(&days, "gadget");
+    let mut world = World {
+        inspector: None,
+        days: Box::new(1),
+    };
+    world.inspector = Some(Inspector(&world.days, "gadget"));
     // Let's say `days` happens to get dropped first.
     // Even when Inspector is dropped, its destructor will not access the
     // borrowed `days`.
@@ -145,15 +171,29 @@ fn main() {
 
 与此同时,有一个不稳定的属性可以用来断言(不安全地)泛型类型的析构函数 *保证(guaranteed)* 不访问任何过期数据,即使它的类型赋予它这样做的能力.
 
-该属性称为`may_dangle`,在[RFC 1327](https://github.com/rust-lang/rfcs/blob/master/text/1327-dropck-param-eyepatch.md)中引入.要将其部署在上面的`Inspector`示例中,我们将编写:
+该属性称为`may_dangle`,在[RFC 1327](https://github.com/rust-lang/rfcs/blob/master/text/1327-dropck-param-eyepatch.md)中引入.要将其部署在上面的`Inspector`中,我们将编写:
 
 ```Rust
+#![feature(dropck_eyepatch)]
 struct Inspector<'a>(&'a u8, &'static str);
 
 unsafe impl<#[may_dangle] 'a> Drop for Inspector<'a> {
     fn drop(&mut self) {
         println!("Inspector(_, {}) knows when *not* to inspect.", self.1);
     }
+}
+
+struct World<'a> {
+    days: Box<u8>,
+    inspector: Option<Inspector<'a>>,
+}
+
+fn main() {
+    let mut world = World {
+        inspector: None,
+        days: Box::new(1),
+    };
+    world.inspector = Some(Inspector(&world.days, "gatget"));
 }
 ```
 
@@ -215,6 +255,10 @@ impl<T: fmt::Display> Drop for Inspector<T> {
 当然,所有这些访问都可以在析构函数调用的其他方法中进一步隐藏,而不是直接在其中编写.
 
 在所有上述情况下,在析构函数中访问`&'a u8`,添加`#[may_dangle]`属性会使该类型容易被滥用,借用检查程序将无法捕获,从而引发破坏.最好避免添加属性.
+
+# 关于删除顺序的相关附注(A related side note about drop order)
+
+虽然结构中的字段的删除顺序是定义的,但依赖它是脆弱和微妙的. 当顺序很重要时,最好使用[`ManuallyDrop`](https://github.com/rust-lang-nursery/nomicon/blob/master/std/mem/struct.ManuallyDrop.html)包装器.
 
 # 这是关于删除检查器的全部吗(Is that all about drop checker)?
 
