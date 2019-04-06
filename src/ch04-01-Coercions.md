@@ -26,7 +26,7 @@
 
 - `[T; n]` => `[T]`
 
-- `T` => `Trait` 其中 `T: Trait`
+- `T` => `dyn Trait` 其中 `T: Trait`
 
 - `Foo<..., T, ...>` => `Foo<..., U, ...>`其中:
 
