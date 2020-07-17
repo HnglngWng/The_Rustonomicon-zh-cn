@@ -24,7 +24,7 @@
 
 - 打破[指针别名规则](https://github.com/rust-lang-nursery/nomicon/blob/master/src/references.html)
 
-- 生成无效的原始值:
+- 生成无效的原始值(单独或作为复合类型(如`enum`/`struct`/数组/元组)的字段):
   - 悬空/空(null)/未对齐的引用
   
   - 空(null)`fn`指针
@@ -38,8 +38,6 @@
   - 非utf8`str`
 
   - `NonNull`或`NonZero*`,即0
-
-  - 包含无效字段的复合类型(`enum`/`struct`/数组/元组)
 
 - 解开(Unwinding)进入另一种语言
 
