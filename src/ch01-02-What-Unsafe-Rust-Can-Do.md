@@ -16,14 +16,16 @@
 
 与C不同,Undefined Behavior在Rust中的范围非常有限.所有核心语言都在关注以下事项:
 
-- 解引用null,悬空或未对齐的指针
+- 解引用null,悬空或未对齐的引用或原始指针
+
+- 为结构/元组字段地址的计算执行越界运算
 
 - 读取[未初始化的内存](https://github.com/rust-lang-nursery/nomicon/blob/master/src/uninitialized.html)
 
 - 打破[指针别名规则](https://github.com/rust-lang-nursery/nomicon/blob/master/src/references.html)
 
-- 生成无效的原始值:
-  - 悬空/空(null)引用
+- 生成/获得无效的原始值:
+  - 悬空/空(null)/未对齐的引用
   
   - 空(null)`fn`指针
   
@@ -34,6 +36,8 @@
   - 范围[0x0,0xD7FF]和[0xE000,0x10FFFF]之外的`char`
   
   - 非utf8`str`
+
+  - 包含无效字段的复合类型(`enum`/`struct`/数组/元组)
 
 - 解开(Unwinding)进入另一种语言
 
