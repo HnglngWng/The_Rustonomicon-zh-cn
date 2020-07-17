@@ -20,8 +20,6 @@
 
 - 为`enum`/`struct`/数组/切片/元组字段地址的计算执行越界运算
 
-- 读取[未初始化的内存](https://github.com/rust-lang-nursery/nomicon/blob/master/src/uninitialized.html)
-
 - 打破[指针别名规则](https://github.com/rust-lang-nursery/nomicon/blob/master/src/references.html)
 
 - 解开(Unwinding)进入另一种语言
@@ -47,7 +45,7 @@
   
   - 非utf8`str`
 
-  - 未初始化的整数(`i*`/`u*`),浮点值(`f*`)或原始指针
+  - 从[未初始化的内存](https://github.com/rust-lang-nursery/nomicon/blob/master/src/uninitialized.html)读取的整数(`i*`/`u*`),浮点值(`f*`)或原始指针
 
   - 具有自定义无效值的无效库类型,如`NonNull`或`NonZero`系列类型,即0
 
