@@ -16,13 +16,19 @@
 
 与C不同,Undefined Behavior在Rust中的范围非常有限.所有核心语言都在关注以下事项:
 
-- 解引用(使用`*`运算符)null,悬空或未对齐的指针,或带有无效元数据的胖指针(请参见下文)
+- 解引用(使用`*`运算符)null,悬空或未对齐的指针,或带有无效元数据的宽指针(请参见下文)
 
 - 为`enum`/`struct`/数组/切片/元组字段地址的计算执行越界运算
 
 - 读取[未初始化的内存](https://github.com/rust-lang-nursery/nomicon/blob/master/src/uninitialized.html)
 
 - 打破[指针别名规则](https://github.com/rust-lang-nursery/nomicon/blob/master/src/references.html)
+
+- 解开(Unwinding)进入另一种语言
+
+- 导致[数据竞争](https://github.com/rust-lang-nursery/nomicon/blob/master/src/races.html)
+
+- 执行使用当前执行线程不支持的目标特性编译的代码(请参阅[`target_feature`](https://doc.rust-lang.org/reference/attributes/codegen.html#the-target_feature-attribute)
 
 - 生成无效的原始值(单独或作为复合类型(如`enum`/`struct`/数组/元组)的字段):
   - 一个不是0或1的`bool`
@@ -35,7 +41,7 @@
   
   - `!`(所有值对该类型均无效)
 
-  - 悬空/空(null)/未对齐的引用,本身指向无效值的引用,或带有无效元数据的胖引用(指向动态大小类型)
+  - 悬空/空(null)/未对齐的引用,本身指向无效值的引用,或带有无效元数据的宽引用(指向动态大小类型)
     - 如果切片的总大小在内存中大于`isize::MAX`字节,那么切片元数据无效
     - `dyn Trait`元数据是无效的,如果它不是一个`Trait`的虚函数表的指针，该`Trait`与引用指向的实际动态trait匹配
   
@@ -43,13 +49,7 @@
 
   - 未初始化的整数(`i*`/`u*`),浮点值(`f*`)或原始指针
 
-  - 具有自定义无效值的无效库类型,如`NonNull`或`NonZero*`,即0
-
-- 解开(Unwinding)进入另一种语言
-
-- 导致[数据竞争](https://github.com/rust-lang-nursery/nomicon/blob/master/src/races.html)
-
-- 执行使用当前执行线程不支持的目标特性编译的代码(请参阅[`target_feature`](https://doc.rust-lang.org/reference/attributes/codegen.html#the-target_feature-attribute)
+  - 具有自定义无效值的无效库类型,如`NonNull`或`NonZero`系列类型,即0
 
 "生成"值发生在赋值,传递给函数/原始操作或从函数/原始操作返回的任何时候.
 
