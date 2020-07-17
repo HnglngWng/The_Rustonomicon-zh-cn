@@ -49,7 +49,7 @@
 
 - 导致[数据竞争](https://github.com/rust-lang-nursery/nomicon/blob/master/src/races.html)
 
-- 执行使用当前平台不支持的平台特性编译的代码(请参阅[`target_feature`](https://doc.rust-lang.org/reference/attributes/codegen.html#the-target_feature-attribute)
+- 执行使用当前执行线程不支持的目标特性编译的代码(请参阅[`target_feature`](https://doc.rust-lang.org/reference/attributes/codegen.html#the-target_feature-attribute)
 
 "生成"值发生在赋值,传递给函数/原始操作或从函数/原始操作返回的任何时候.
 
