@@ -37,7 +37,7 @@
   
   - 非utf8`str`
 
-  - `NonNull`或`NonZero*`,即0
+  - 具有自定义无效值的无效库类型,如`NonNull`或`NonZero*`,即0
 
 - 解开(Unwinding)进入另一种语言
 
