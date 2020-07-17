@@ -32,7 +32,7 @@ Safe Rust和Unsafe Rust之间的分离由`unsafe`关键字控制,该关键字充
 
 大多数Rust标准库也在内部使用Unsafe Rust.这些实现通常都经过严格的手动检查,因此可以假设构建在这些实现之上的Safe Rust接口是安全的.
 
-所有这些分离的需要归结为Safe Rust的一个基本属性:
+所有这些分离的需要归结为Safe Rust的一个基本属性,*可靠性属性(soundness property)* :
 
 **无论如何,Safe Rust都不会导致未定义行为.**
 
