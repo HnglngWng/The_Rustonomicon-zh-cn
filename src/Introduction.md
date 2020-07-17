@@ -10,9 +10,9 @@ Rustonomicon深入研究了编写Unsafe Rust程序时需要了解的所有可怕
 
 如果你希望在编写Rust程序方面有一个漫长而愉快的职业生涯,你现在应该回过头来,忘记你曾经看过这本书.没有必要.然而,如果你打算编写不安全的代码--或者只是想深入研究这种语言的内容--那么这本书包含许多有用的信息.
 
-与 *[The Rust Programming Language](https://doc.rust-lang.org/book/)* 不同,我们将假设相当多的先验知识.特别是,你应该熟悉基本的系统编程和Rust.如果你对这些主题感到不舒服,则应首先考虑阅读[这本书](https://doc.rust-lang.org/book/).也就是说,我们不会假设你已经阅读过,我们会在适当的情况下偶尔回顾一下基础知识.如果你愿意,你可以直接跳到这本书;只要知道我们不会从头开始解释所有的东西.
+与 *[The Rust Programming Language](https://doc.rust-lang.org/book/index.html)* 不同,我们将假设相当多的先验知识.特别是,你应该熟悉基本的系统编程和Rust.如果你对这些主题感到不舒服,则应首先考虑阅读[The Book](https://doc.rust-lang.org/book/index.html).也就是说,我们不会假设你已经阅读过,我们会在适当的情况下偶尔回顾一下基础知识.如果你愿意,你可以直接跳到这本书;只要知道我们不会从头开始解释所有的东西.
 
-本书主要作为[The Reference](https://doc.rust-lang.org/reference/)的高级伙伴而存在. Reference详细描述语言每个部分的语法和语义,而Rustonomicon则描述如何将这些部分结合使用,以及在这样做时会遇到的问题.
+本书主要作为[The Reference](https://doc.rust-lang.org/reference/index.html)的高级伙伴而存在. Reference详细描述语言每个部分的语法和语义,而Rustonomicon则描述如何将这些部分结合使用,以及在这样做时会遇到的问题.
 
 Reference将告诉你引用,析构函数和展开的语法和语义,但不会告诉你组合它们如何会导致异常安全问题,或者如何处理这些问题.
 
