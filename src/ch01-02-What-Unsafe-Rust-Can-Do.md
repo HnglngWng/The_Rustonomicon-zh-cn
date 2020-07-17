@@ -26,7 +26,7 @@
 
 - 导致[数据竞争](https://github.com/rust-lang-nursery/nomicon/blob/master/src/races.html)
 
-- 执行使用当前执行线程不支持的目标特性编译的代码(请参阅[`target_feature`](https://doc.rust-lang.org/reference/attributes/codegen.html#the-target_feature-attribute)
+- 执行使用当前执行线程不支持的[目标特性](https://doc.rust-lang.org/reference/attributes/codegen.html#the-target_feature-attribute)编译的代码
 
 - 生成无效的原始值(单独或作为复合类型(如`enum`/`struct`/数组/元组)的字段):
   - 一个不是0或1的`bool`
