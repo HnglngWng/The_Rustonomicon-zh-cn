@@ -18,7 +18,7 @@
 
 - 解引用null,悬空或未对齐的引用或原始指针
 
-- 为结构/元组字段地址的计算执行越界运算
+- 为`enum`/`struct`/数组/切片/元组字段地址的计算执行越界运算
 
 - 读取[未初始化的内存](https://github.com/rust-lang-nursery/nomicon/blob/master/src/uninitialized.html)
 
