@@ -16,7 +16,7 @@
 
 与C不同,Undefined Behavior在Rust中的范围非常有限.所有核心语言都在关注以下事项:
 
-- 解引用null,悬空或未对齐的引用或原始指针
+- 从null,悬空或未对齐的引用或原始指针加载或存储
 
 - 为`enum`/`struct`/数组/切片/元组字段地址的计算执行越界运算
 
@@ -44,6 +44,8 @@
 - 导致[数据竞争](https://github.com/rust-lang-nursery/nomicon/blob/master/src/races.html)
 
 "生成"值发生在赋值,传递给函数/原始操作或从函数/原始操作返回的任何时候.
+
+如果引用/指针所指向的字节不都是同一个分配的一部分，则它是"悬空的". 它指向的字节范围由指针值和它指向的对象类型的大小确定.
 
 仅此而已.这就是Rust中Undefined Behavior的所有原因.当然,不安全的函数和traits可以自由地声明程序必须维护的任意其他约束,以避免Undefined Behavior.例如,分配器API声明解除分配未分配的内存是Undefined Behavior.
 
