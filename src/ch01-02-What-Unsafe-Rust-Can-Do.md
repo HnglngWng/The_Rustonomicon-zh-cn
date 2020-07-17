@@ -37,6 +37,8 @@
   
   - 非utf8`str`
 
+  - `NonNull`或`NonZero*`,即0
+
   - 包含无效字段的复合类型(`enum`/`struct`/数组/元组)
 
 - 解开(Unwinding)进入另一种语言
