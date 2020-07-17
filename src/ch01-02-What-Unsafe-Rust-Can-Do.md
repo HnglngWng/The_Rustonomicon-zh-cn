@@ -25,15 +25,17 @@
 - 打破[指针别名规则](https://github.com/rust-lang-nursery/nomicon/blob/master/src/references.html)
 
 - 生成无效的原始值(单独或作为复合类型(如`enum`/`struct`/数组/元组)的字段):
-  - 悬空/空(null)/未对齐的引用,本身指向无效值的引用,或带有无效元数据的胖引用(指向动态大小类型)
-  
-  - 空(null)`fn`指针
-  
   - 一个不是0或1的`bool`
   
   - 未定义的`enum`判别式
   
+  - 空(null)`fn`指针
+  
   - 范围[0x0,0xD7FF]和[0xE000,0x10FFFF]之外的`char`
+  
+  - `!`(所有值对该类型均无效)
+
+  - 悬空/空(null)/未对齐的引用,本身指向无效值的引用,或带有无效元数据的胖引用(指向动态大小类型)
   
   - 非utf8`str`
 
