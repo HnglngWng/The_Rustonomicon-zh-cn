@@ -24,7 +24,7 @@
 
 - 打破[指针别名规则](https://github.com/rust-lang-nursery/nomicon/blob/master/src/references.html)
 
-- 生成/获得无效的原始值:
+- 生成无效的原始值:
   - 悬空/空(null)/未对齐的引用
   
   - 空(null)`fn`指针
@@ -44,6 +44,8 @@
 - 解开(Unwinding)进入另一种语言
 
 - 导致[数据竞争](https://github.com/rust-lang-nursery/nomicon/blob/master/src/races.html)
+
+"生成"值发生在赋值,传递给函数/原始操作或从函数/原始操作返回的任何时候.
 
 仅此而已.这就是Rust中Undefined Behavior的所有原因.当然,不安全的函数和traits可以自由地声明程序必须维护的任意其他约束,以避免Undefined Behavior.例如,分配器API声明解除分配未分配的内存是Undefined Behavior.
 
