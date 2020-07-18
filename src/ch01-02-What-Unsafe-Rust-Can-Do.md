@@ -16,7 +16,7 @@
 
 与C不同,Undefined Behavior在Rust中的范围非常有限.所有核心语言都在关注以下事项:
 
-- 解引用(使用`*`运算符)悬空或未对齐的指针,或带有无效元数据的宽指针(请参见下文)
+- 解引用(使用`*`运算符)悬空或未对齐的指针(见下文)
 
 - 为`enum`/`struct`/数组/切片/元组字段地址的计算执行越界运算
 
@@ -43,6 +43,8 @@
     - 如果切片的总大小在内存中大于`isize::MAX`字节,那么切片元数据无效
     - `dyn Trait`元数据是无效的,如果它不是一个`Trait`的虚函数表的指针，该`Trait`与引用指向的实际动态trait匹配
   
+  - 带有无效元数据的宽原始指针(请参见上文)
+
   - 非有效UTF-8的`str`
 
   - 从[未初始化的内存](https://github.com/rust-lang-nursery/nomicon/blob/master/src/uninitialized.html)读取的整数(`i*`/`u*`),浮点值(`f*`)或原始指针
