@@ -527,7 +527,7 @@ fn main() {
 C端的代码如下所示:
 
 ```Rust
-void register(void (*f)(void (*)(int), int)) {
+void register(void (*f)(int (*)(int), int)) {
     ...
 }
 ```
