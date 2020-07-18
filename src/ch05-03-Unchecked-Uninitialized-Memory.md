@@ -9,8 +9,10 @@ Unsafe Rust为我们提供了一个强大的工具来处理这个问题:[`MaybeU
 ```Rust
 use std::mem::{self, MaybeUninit};
 
-// Size of the array is hard-coded but easy to change. This means we can't
-// use [a, b, c] syntax to initialize the array, though!
+// Size of the array is hard-coded but easy to change (meaning, changing just
+// the constant is sufficient). This means we can't use [a, b, c] syntax to
+// initialize the array, though, as we would have to keep that in sync
+// with `SIZE`!
 const SIZE: usize = 10;
 
 let x = {
