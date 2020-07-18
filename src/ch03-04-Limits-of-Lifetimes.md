@@ -68,7 +68,6 @@ fn main() {
 
 ```Rust
 # use std::collections::HashMap;
-# use std::cmp::Eq;
 # use std::hash::Hash;
 fn get_default<'m, K, V>(map: &'m mut HashMap<K, V>, key: K) -> &'m mut V
 where
