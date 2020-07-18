@@ -48,6 +48,11 @@ error: aborting due to previous error
 为了"教(teach)"借用我们正在做的事情是好的,我们需要下降到不安全代码.例如,可变切片暴露`split_at_mut`函数,该函数使用切片并返回两个可变切片.一个用于索引左侧的所有内容,另一个用于右侧的所有内容.直观地,我们知道这是安全的,因为切片不重叠,因此别名.但是,实现需要一些不安全:
 
 ```Rust
+# use std::slice::from_raw_parts_mut;
+# struct FakeSlice<T>(T);
+# impl<T> FakeSlice<T> {
+# fn len(&self) -> usize { unimplemented!() }
+# fn as_mut_ptr(&mut self) -> *mut T { unimplemented!() }
 fn split_at_mut(&mut self, mid: usize) -> (&mut [T], &mut [T]) {
     let len = self.len();
     let ptr = self.as_mut_ptr();
@@ -57,6 +62,7 @@ fn split_at_mut(&mut self, mid: usize) -> (&mut [T], &mut [T]) {
          from_raw_parts_mut(ptr.offset(mid as isize), len - mid))
     }
 }
+# }
 ```
 
 这实际上有点微妙.为了避免将两个`&mut`变为相同的值,我们通过原始指针显式地构建全新的切片.
