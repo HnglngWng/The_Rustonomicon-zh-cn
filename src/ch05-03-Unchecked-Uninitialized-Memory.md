@@ -8,7 +8,7 @@ Unsafe Rust为我们提供了一个强大的工具来处理这个问题:[`mem::u
 
 如果你正在使用原始系统分配器(allocator),这会返回指向未初始化内存的指针,这也是一个问题.
 
-要处理这个问题,我们必须使用[`ptr`](https://doc.rust-lang.org/std/ptr/index.html)模块.特别是,它提供了三个函数,允许我们将字节分配给内存中的某个位置,而不会删除旧值:[`write`](https://doc.rust-lang.org/std/ptr/fn.write.html),[`copy`](https://doc.rust-lang.org/std/ptr/fn.copy.html)和[`copy_nonoverlapping`](https://doc.rust-lang.org/std/ptr/fn/copy_nonoverlapping.html).
+要处理这个问题,我们必须使用[`ptr`](https://doc.rust-lang.org/std/ptr/index.html)模块.特别是,它提供了三个函数,允许我们将字节分配给内存中的某个位置,而不会删除旧值:[`write`](https://doc.rust-lang.org/std/ptr/fn.write.html),[`copy`](https://doc.rust-lang.org/std/ptr/fn.copy.html)和[`copy_nonoverlapping`](https://doc.rust-lang.org/std/ptr/fn.copy_nonoverlapping.html).
 
 - `ptr::write(ptr, val)`接受一个`val`并将其移动到`ptr`指向的地址.
 
