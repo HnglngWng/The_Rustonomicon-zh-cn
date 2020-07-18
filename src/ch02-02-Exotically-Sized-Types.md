@@ -31,7 +31,7 @@ struct Foo {
 ```Rust
 struct MySuperSliceable<T: ?Sized> {
     info: u32,
-    data: T
+    data: T,
 }
 
 fn main() {
