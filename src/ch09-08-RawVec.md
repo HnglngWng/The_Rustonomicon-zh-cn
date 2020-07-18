@@ -13,7 +13,7 @@ struct RawVec<T> {
 impl<T> RawVec<T> {
     fn new() -> Self {
         assert!(mem::size_of::<T>() != 0, "TODO: implement ZST support");
-        RawVec { ptr: Unique::empty(), cap: 0 }
+        RawVec { ptr: Unique::dangling(), cap: 0 }
     }
 
     // unchanged from Vec
