@@ -70,7 +70,9 @@ struct Baz {
 
 但是在Rust中,我们可以说`Set<Key> = Map<Key, ()>`.现在Rust静态地知道每个加载和存储都是无用的,并且没有任何大小的分配.结果是此单态化代码基本上是HashSet的自定义实现,没有HashMap必须支持值的开销.
 
-安全代码不必担心ZSTs,但 *不安全的(unsafe)* 代码必须小心没有大小的类型的后果.特别是,指针偏移是无操作,并且当请求零大小的分配时,标准分配器可能返回`null`,这与内存不足结果无法区分.
+安全代码不必担心ZSTs,但 *不安全的(unsafe)* 代码必须小心没有大小的类型的后果.特别是,指针偏移是无操作,和分配器通常[需要一个非零大小](https://doc.rust-lang.org/std/alloc/trait.GlobalAlloc.html#tymethod.alloc).
+
+请注意,与所有其他引用一样,对ZST的引用(包括空切片)必须为非null并适当对齐.像其他任何类型一样,解引用一个指向ZST的空或未对齐的指针是[未定义行为](ch01-02-What-Unsafe-Rust-Can-Do.md).
 
 # 空类型(Empty Types)
 
