@@ -1,10 +1,12 @@
 # 生命周期(Lifetimes)
 
-Rust整个 *生命周期(lifetimes)* 都会执行这些规则.生命周期实际上只是程序中某处作用域的名称.每个引用以及包含引用的任何内容都使用指定其有效作用域的生命周期进行标记.
+Rust整个 *生命周期(lifetimes)* 强制执行这些规则.生命周期是引用必须对其有效的代码的命名区域. 这些区域可能相当复杂,因为它们对应于程序中的执行路径. 这些执行路径中甚至可能存在漏洞,因为只要在重新使用引用之前对其进行初始化,就有可能使其无效. 包含引用(或假装为引用)的类型也可以用生命周期进行标记,这样Rust 也可以防止它们失效.
+
+在我们的大多数示例中,生命周期将与作用域一致. 这是因为我们的示例很简单. 它们不一致的更为复杂的情况如下所述.
 
 在函数体中,Rust通常不会让你显式命名所涉及的生命周期.这是因为通常没有必要在局部上下文中谈论生命周期;Rust拥有所有信息,可以尽可能优化地处理所有事情.你经常会引入许多你必须编写的匿名作用域和临时作用域,以使你的代码正常工作.
 
-但是,一旦跨越函数边界,就需要开始讨论生命周期.生命周期用撇号表示:`'a'`,`static`.为了试探生命周期,我们将假装我们实际上允许用生命周期来标记作用域,脱糖(desugar)从本章开始的例子.
+但是,一旦跨越函数边界,就需要开始讨论生命周期.生命周期用撇号表示:`'a`,`'static`.为了试探生命周期,我们将假装我们实际上允许用生命周期来标记作用域,脱糖(desugar)从本章开始的例子.
 
 最初,我们的例子使用了 *激进的(aggressive)* 糖--甚至是高果糖玉米糖浆--对作用域和生命周期,因为显式地写出所以内容 *非常嘈杂(extremely noisy)* (语法噪音--译注).所有Rust代码都依赖于激进的推断和"明显"事物的省略.
 
@@ -153,6 +155,69 @@ println!("{}", x);
 
 这里的问题有点微妙和有趣.我们希望Rust拒绝此程序,原因如下:当我们尝试获取对`data`的可变引用以`push`时,我们有一个活着的对`data`的衍生物的共享引用`x`.这将创建一个别名的可变引用,这将违反引用的 *第二个(second)* 规则.
 
-然而,这 *根本不是(not at all)* Rust认为这个程序是坏的的原因.Rust不理解`x`是对数据子路径的引用.它完全不了解`Vec`.它看到的是`x`必须活为`b`,被打印出来.`Index::index`的签名随后要求我们对`data`的引用必须存活为`'b`.当我们尝试调用`push`时,它会看到我们尝试创建一个`&'c mut data`.Rust知道`'c`包含在`'b`中,并拒绝我们的程序,因为`&b data`数据必须仍然活着!
+然而,这 *根本不是(not at all)* Rust认为这个程序是坏的的原因.Rust不理解`x`是对数据子路径的引用.它完全不了解`Vec`.它看到的是`x`必须活为`'b`,被打印出来.`Index::index`的签名随后要求我们对`data`的引用必须存活为`'b`.当我们尝试调用`push`时,它会看到我们尝试创建一个`&'c mut data`.Rust知道`'c`包含在`'b`中,并拒绝我们的程序,因为`&b data`数据必须仍然活着!
 
 在这里,我们看到生命周期系统比我们实际感兴趣的保留引用语义要粗糙得多.在大多数情况下, *这是完全可以的(that's totally ok)* ,因为它使我们不用整天向编译器解释我们的程序.然而,它确实意味着一些完全正确的与Rust的 *真正(true)* 语义相关的程序被拒绝,因为生命周期太过愚蠢.
+
+# 生命周期所覆盖的区域(The area covered by a lifetime)
+
+生命周期(有时称为 *借用(borrow)* )从它被创建的地方到最后一次使用是 *活的(alive)* . 借来的东西需要比借用活得久. 这看起来很简单,但是有一点点微妙之处.
+
+以下代码片段可以编译,因为在打印`x`之后不再需要它,因此它是悬空的还是别名的都也没关系(即使变量`x` *技术上* 存在到作用域的最后).
+
+```Rust
+let mut data = vec![1, 2, 3];
+let x = &data[0];
+println!("{}", x);
+// This is OK, x is no longer needed
+data.push(4);
+```
+
+但是,如果该值有析构函数,则该析构函数将在作用域的末尾运行. 运行析构函数被认为是一次使用--显然是最后一次. 因此,这将 *不* 编译.
+
+```Rust
+#[derive(Debug)]
+struct X<'a>(&'a i32);
+
+impl Drop for X<'_> {
+    fn drop(&mut self) {}
+}
+
+let mut data = vec![1, 2, 3];
+let x = X(&data[0]);
+println!("{:?}", x);
+data.push(4);
+// Here, the destructor is run and therefore this'll fail to compile.
+```
+
+此外,借用可能有多种可能的最后使用,例如在条件的每个分支中.
+
+```Rust
+# fn some_condition() -> bool { true }
+let mut data = vec![1, 2, 3];
+let x = &data[0];
+
+if some_condition() {
+    println!("{}", x); // This is the last use of `x` in this branch
+    data.push(4);      // So we can push here
+} else {
+    // There's no use of `x` in here, so effectively the last use is the
+    // creation of x at the top of the example.
+    data.push(5);
+}
+```
+
+而生命周期在其中可能会有一个停顿. 或者,你可以把它看成是两个不同的借用,只是绑定在同一个局部变量上. 这通常在循环周围发生(在循环结束时写入变量的新值,并在下一次迭代的顶部最后一次使用它).
+
+```Rust
+let mut data = vec![1, 2, 3];
+// This mut allows us to change where the reference points to
+let mut x = &data[0];
+
+println!("{}", x); // Last use of this borrow
+data.push(4);
+x = &data[3]; // We start a new borrow here
+println!("{}", x);
+```
+
+从历史上看,Rust一直保持借用直到作用域结束,因此这些示例可能无法使用较旧的编译器进行编译. 此外,仍然有一些角落的情况,Rust无法适当地缩短借用的存活部分,即使它看起来应该也无法编译. 这些将随着时间的推移而解决.
