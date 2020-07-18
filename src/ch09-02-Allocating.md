@@ -2,7 +2,7 @@
 
 使用Unique会破坏Vec(以及所有std集合)的一个重要特性:空的Vec实际上根本没有分配.所以如果我们不能分配,也不能在`ptr`中放一个空指针,我们在`Vec::new`中做什么?好吧,我们只是放了一些其它的垃圾在里面!
 
-这非常好,因为我们已经将`cap == 0`作为我们无分配的哨兵.我们甚至不需要在几乎任何代码中专门处理它,因为我们通常需要检查`cap > len`或`len > 0`.这里推荐的Rust值是`mem::align_of::<T>()`.Unique为此提供便利:`Unique::empty()`.有很多地方我们想要使用`empty`,因为没有真正的分配,但是`null`会使编译器做坏事.
+这非常好,因为我们已经将`cap == 0`作为我们无分配的哨兵.我们甚至不需要在几乎任何代码中专门处理它,因为我们通常需要检查`cap > len`或`len > 0`.这里推荐的Rust值是`mem::align_of::<T>()`.Unique为此提供便利:`Unique::dangling()`.有很多地方我们想要使用`dangling`,因为没有真正的分配,但是`null`会使编译器做坏事.
 
 所以:
 
@@ -14,7 +14,7 @@ use std::mem;
 impl<T> Vec<T> {
     fn new() -> Self {
         assert!(mem::size_of::<T>() != 0, "We're not ready to handle ZSTs");
-        Vec { ptr: Unique::empty(), len: 0, cap: 0 }
+        Vec { ptr: Unique::dangling(), len: 0, cap: 0 }
     }
 }
 ```
