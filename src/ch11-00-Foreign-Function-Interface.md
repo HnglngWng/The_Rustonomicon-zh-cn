@@ -540,13 +540,13 @@ void register(void (*f)(void (*)(int), int)) {
 
 ```Rust
 #[no_mangle]
-pub extern fn hello_rust() -> *const u8 {
+pub extern "C" fn hello_rust() -> *const u8 {
     "Hello, world!\0".as_ptr()
 }
 # fn main() {}
 ```
 
-`extern`使得该函数遵循C调用约定,如上面"外部调用约定"中所讨论的.`no_mangle`属性关闭了Rust的名称修改,因此更容易链接到.
+`extern "C"`使得该函数遵循C调用约定,如上面"外部调用约定"中所讨论的.`no_mangle`属性关闭了Rust的名称修改,因此更容易链接到.
 
 # FFI和恐慌(FFI and panics)
 
