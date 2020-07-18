@@ -190,6 +190,8 @@ data.push(4);
 // Here, the destructor is run and therefore this'll fail to compile.
 ```
 
+一种使编译器确信`x`不再有效的方法是在`data.push(4)`之前使用`drop(x)`.
+
 此外,借用可能有多种可能的最后使用,例如在条件的每个分支中.
 
 ```Rust
