@@ -57,7 +57,7 @@ dbg!(x);
 
 我们实际上会覆盖`Box<u32>`,从而导致未初始化数据的`drop`,这会引起很多悲伤和痛苦.
 
-如果由于某种原因我们不能使用`MaybeUninit::new`,则正确的替代选择是使用[`ptr`](https://doc.rust-lang.org/core/ptr/index.html)模块. 特别是,它提供了三个函数,这些函数使我们能够在不删除旧值的情况下将字节分配到内存中的某个位置:[`write`](https://doc.rust-lang.org/core/ptr/fn.write.html),[`copy`](https://doc.rust-lang.org/core/ptr/fn.copy.html)和[`copy_nonoverlapping`](https://doc.rust-lang.org/core/ptr/fn.copy_nonoverlapping.html).
+如果由于某种原因我们不能使用`MaybeUninit::new`,则正确的替代选择是使用[`ptr`](https://doc.rust-lang.org/core/ptr/index.html)模块. 特别是,它提供了三个函数,这些函数使我们能够在不删除旧值的情况下将字节分配到内存中的某个位置:[`write`](https://doc.rust-lang.org/core/ptr/fn.write.html),[`copy`](https://doc.rust-lang.org/std/ptr/fn.copy.html)和[`copy_nonoverlapping`](https://doc.rust-lang.org/std/ptr/fn.copy_nonoverlapping.html).
 
 - `ptr::write(ptr, val)`接受一个`val`并将其移动到`ptr`指向的地址.
 
