@@ -21,7 +21,7 @@ fn drop(&mut self);
 ```Rust
 #![feature(ptr_internals, allocator_api)]
 
-use std::alloc::{Alloc, Global, GlobalAlloc, Layout};
+use std::alloc::{AllocRef, Global, GlobalAlloc, Layout};
 use std::mem;
 use std::ptr::{drop_in_place, NonNull, Unique};
 
@@ -46,7 +46,7 @@ impl<T> Drop for Box<T> {
 ```Rust
 #![feature(allocator_api, ptr_internals)]
 
-use std::alloc::{Alloc, Global, GlobalAlloc, Layout};
+use std::alloc::{AllocRef, Global, GlobalAlloc, Layout};
 use std::ptr::{drop_in_place, Unique, NonNull};
 use std::mem;
 
@@ -109,7 +109,7 @@ enum Link {
 ```Rust
 #![feature(allocator_api, ptr_internals)]
 
-use std::alloc::{Alloc, GlobalAlloc, Global, Layout};
+use std::alloc::{AllocRef, GlobalAlloc, Global, Layout};
 use std::ptr::{drop_in_place, Unique, NonNull};
 use std::mem;
 
