@@ -34,7 +34,7 @@ unsafe impl Sync for MyBox {}
 在 *非常罕见的(incredibly rare)* 情况下,类型被不适当地自动派生为Send或Sync,那么人们也可以不实现Send和Sync:
 
 ```Rust
-#![feature(optin_builtin_traits)]
+#![feature(negative_impls)]
 
 // I have some magic semantics for some synchronization primitive!
 struct SpecialThreadToken(u8);
