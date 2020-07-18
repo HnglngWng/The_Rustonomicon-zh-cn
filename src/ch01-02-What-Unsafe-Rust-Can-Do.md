@@ -39,15 +39,16 @@
   
   - `!`(所有值对该类型均无效)
 
+  - 从[未初始化的内存](https://github.com/rust-lang-nursery/nomicon/blob/master/src/uninitialized.html)读取的整数(`i*`/`u*`),浮点值(`f*`)或原始指针
+
   - 悬空,未对齐,或指向无效值的引用/`Box`.
   
   - 有无效元数据的宽引用,`Box`,或原始指针:
-    - 如果切片的总大小在内存中大于`isize::MAX`字节,那么切片元数据无效
     - `dyn Trait`元数据是无效的,如果它不是一个`Trait`的虚函数表的指针，该`Trait`与引用指向的实际动态trait匹配
+
+    - 如果长度不是有效的`usize`,则切片元数据无效(即,不得从未初始化的内存中读取)
   
   - 非有效UTF-8的`str`
-
-  - 从[未初始化的内存](https://github.com/rust-lang-nursery/nomicon/blob/master/src/uninitialized.html)读取的整数(`i*`/`u*`),浮点值(`f*`)或原始指针
 
   - 具有自定义无效值的类型,该值属于这些值之一,例如为null的`NonNull`.(请求自定义无效值是一个不稳定的特性,但是某些稳定的libstd类型,如`NonNull`,会使用它.)
 
