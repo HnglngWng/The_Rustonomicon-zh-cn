@@ -1,6 +1,6 @@
 # 替代表示(Alternative representations)
 
-Rust允许你从默认情况下指定替代的数据布局策略.见[reference](https://github.com/rust-rfcs/unsafe-code-guidelines/tree/master/reference/src/representation.md).
+Rust允许你从默认情况下指定替代的数据布局策略.还有[unsafe code guidelines](https://rust-lang.github.io/unsafe-code-guidelines/layout.html)(请注意,这 *不是* 规范).
 
 # repr(C)
 
