@@ -10,7 +10,7 @@
 
 ## 分配零大小的类型(Allocating Zero-Sized Types)
 
-因此,如果分配器API不支持零大小的分配,那么我们将分配哪些内容作为分配?`Unique::empty()`当然!几乎每个具有ZST的操作都是无操作,因为ZST只有一个值,因此不需要考虑存储或加载它们的状态.这实际上扩展到`ptr::read`和`ptr::write`:它们实际上根本不会查看指针.因此,我们永远不需要更改指针.
+因此,如果分配器API不支持零大小的分配,那么我们将分配哪些内容作为分配?`Unique::dangling()`当然!几乎每个具有ZST的操作都是无操作,因为ZST只有一个值,因此不需要考虑存储或加载它们的状态.这实际上扩展到`ptr::read`和`ptr::write`:它们实际上根本不会查看指针.因此,我们永远不需要更改指针.
 
 但请注意,我们之前对溢出前内存不足的依赖不再适用于零大小的类型.我们必须显式防范零大小类型的容量溢出.
 
@@ -22,8 +22,8 @@ impl<T> RawVec<T> {
         // !0 is usize::MAX. This branch should be stripped at compile time.
         let cap = if mem::size_of::<T>() == 0 { !0 } else { 0 };
 
-        // Unique::empty() doubles as "unallocated" and "zero-sized allocation"
-        RawVec { ptr: Unique::empty(), cap: cap }
+        // Unique::dangling() doubles as "unallocated" and "zero-sized allocation"
+        RawVec { ptr: Unique::dangling(), cap: cap }
     }
 
     fn grow(&mut self) {
