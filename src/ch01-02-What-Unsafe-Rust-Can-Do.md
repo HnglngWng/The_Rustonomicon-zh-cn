@@ -22,7 +22,7 @@
 
 - 打破[指针别名规则](https://github.com/rust-lang-nursery/nomicon/blob/master/src/references.html)
 
-- 调用具有错误的调用ABI或错误的展开ABI的函数.
+- 调用具有错误的调用ABI的函数或从具有错误的展开ABI的函数展开.
 
 - 导致[数据竞争](https://github.com/rust-lang-nursery/nomicon/blob/master/src/races.html)
 
