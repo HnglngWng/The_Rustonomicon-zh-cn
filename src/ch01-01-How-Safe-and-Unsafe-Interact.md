@@ -8,17 +8,17 @@ Safe Rust和Unsafe Rust之间的分离由`unsafe`关键字控制,该关键字充
 
 你可以将`unsafe`用在 *函数和traits声明(functions and trait declarations)* 上来指示存在未经检查的契约.在函数上,`unsafe`意味着函数的用户必须检查该函数的文档,以确保它们以维护函数所需的契约的方式使用它.在trait声明上,`unsafe`意味着trait的实现者必须检查trait文档以确保它们的实现维持trait所需的契约.
 
-你可以对块使用`unsafe`来声明在其中执行的所有不安全操作都经过验证,以维护这些操作的契约.例如,传递给`slice::get_unchecked`的索引在界限内(in-bounds).
+你可以对块使用`unsafe`来声明在其中执行的所有不安全操作都经过验证,以维护这些操作的契约.例如,传递给[`slice::get_unchecked`](../std/primitive.slice.html#method.get_unchecked)的索引在界限内(in-bounds).
 
-你可以对trait实现使用`unsafe`来声明实现支持trait的契约.例如,实现`Send`的类型移动到另一个线程是真的安全的.
+你可以对trait实现使用`unsafe`来声明实现支持trait的契约.例如,实现[`Send`](https://github.com/rust-lang-nursery/nomicon/blob/master/std/marker/trait.Send.html)的类型移动到另一个线程是真的安全的.
 
 标准库有许多不安全的函数,包括:
 
-- `slice::get_unchecked`,执行未经检查的索引,允许自由地违反内存安全性.
+- [`slice::get_unchecked`](../std/primitive.slice.html#method.get_unchecked),执行未经检查的索引,允许自由地违反内存安全性.
 
-- `mem::transmute`将某些值重新解释为具有给定类型,以任意方式绕过类型安全(有关详细信息,请参阅[转换](https://github.com/rust-lang-nursery/nomicon/blob/master/src/conversions.html)).
+- [`mem::transmute`](../std/mem/fn.transmute.html)将某些值重新解释为具有给定类型,以任意方式绕过类型安全(有关详细信息,请参阅[转换](https://github.com/rust-lang-nursery/nomicon/blob/master/src/conversions.html)).
 
-- 每个指向有大小类型的原始指针都有一个`offset`方法,如果传递的偏移量不在界限内"([in bounds](https://github.com/rust-lang-nursery/nomicon/blob/master/std/primitive.pointer.html#method.offset))",则产生未定义行为.
+- 每个指向有大小类型的原始指针都有一个[`offset`](../std/primitive.pointer.html#method.offset)方法,如果传递的偏移量不在界限内"([in bounds](https://github.com/rust-lang-nursery/nomicon/blob/master/std/primitive.pointer.html#method.offset))",则产生未定义行为.
 
 - 所有FFI(外部函数接口)函数都是`unsafe`,因为另一种语言可以执行Rust编译器无法检查的任意操作.
 
@@ -38,9 +38,9 @@ Safe Rust和Unsafe Rust之间的分离由`unsafe`关键字控制,该关键字充
 
 安全/不安全拆分的设计意味着Safe和Unsafe Rust之间存在不对称的信任关系.Safe Rust本身必须相信它所触及的任何Unsafe Rust都已正确编写.另一方面,Unsafe Rust在信任Safe Rust时必须非常小心.
 
-例如,Rust具有`PartialOrd`和`Ord`trait来区分可以"仅(just)"进行比较的类型,以及提供"总(total)"排序的类型(这基本上意味着比较表现得相当合理).
+例如,Rust具有[`PartialOrd`](../std/cmp/trait.PartialOrd.html)和[`Ord`](../std/cmp/trait.Ord.html)trait来区分可以"仅(just)"进行比较的类型,以及提供"总(total)"排序的类型(这基本上意味着比较表现得相当合理).
 
-`BTreeMap`对部分排序的类型没有意义,因此它需要它的键实现`Ord`.但是,`BTreeMap`在其实现中包含Unsafe Rust代码.因为对于导致未定义行为的草率`Ord`实现(写入Safe)是不可接受的,所以`BTreeMap`中的Unsafe代码必须编写得健壮,以对抗实际上不是全部(total)的`Ord`实现--尽管这是需要`Ord`的关键所在.
+[`BTreeMap`](../std/collections/struct.BTreeMap.html)对部分排序的类型没有意义,因此它需要它的键实现`Ord`.但是,`BTreeMap`在其实现中包含Unsafe Rust代码.因为对于导致未定义行为的草率`Ord`实现(写入Safe)是不可接受的,所以`BTreeMap`中的Unsafe代码必须编写得健壮,以对抗实际上不是全部(total)的`Ord`实现--尽管这是需要`Ord`的关键所在.
 
 Unsafe Rust代码无法信任Safe Rust代码是正确编写的.也就是说,如果你输入没有总排序的值,`BTreeMap`仍然会完全不正常.它不会导致未定义行为.
 
