@@ -72,12 +72,12 @@ struct Vec<T> {
 
 |Phantom type|`'a`| `T`|
 |--|--|--|
-|`PhantomData<T>`|-|可变(具有删除检查)|
-|`PhantomData<&'a T>`|可变|可变|
-|`PhantomData<&'a mut T>`|可变|不变|
-|`PhantomData<*const T>`|-|可变|
+|`PhantomData<T>`|-|协变(具有删除检查)|
+|`PhantomData<&'a T>`|协变|协变|
+|`PhantomData<&'a mut T>`|协变|不变|
+|`PhantomData<*const T>`|-|协变|
 |`PhantomData<*mut T>`|-|不变|
 |`PhantomData<fn(T)>`|-|逆变|
-|`PhantomData<fn() -> T>`|-|可变|
+|`PhantomData<fn() -> T>`|-|协变|
 |`PhantomData<fn(T) -> T>`|-|不变|
 |`PhantomData<Cell<&'a ()>>`|不变|-|
