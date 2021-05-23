@@ -56,7 +56,7 @@ Rust允许你从默认情况下指定替代的数据布局策略.还有[unsafe c
 
 `repr(packed)`不能轻易使用.除非你有极端要求,否则不应使用此选项.
 
-这个repr是`repr(C)`和`repr(rust)`的修饰符.
+这个repr是`repr(C)`和`repr(Rust)`的修饰符.
 
 # repr(align(n))
 
@@ -64,4 +64,4 @@ Rust允许你从默认情况下指定替代的数据布局策略.还有[unsafe c
 
 这可以实现一些技巧,例如确保数组的相邻元素永远不会彼此共享相同的高速缓存行(这可能会加速某些类型的并发代码).
 
-这是`repr(C)`和`repr(rust)`的修饰符. 它与`repr(packed)`不兼容.
+这是`repr(C)`和`repr(Rust)`的修饰符. 它与`repr(packed)`不兼容.
