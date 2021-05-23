@@ -22,6 +22,8 @@
 
 - 解引用强制(Deref coercion):如果`T`解引用为`U`(即`T: Deref<Target=U>`),则类型`&T`的表达式`&x`到类型`&U`的表达式`&*x`
 
+- *函数指针的非捕获闭包([RFC 1558](https://rust-lang.github.io/rfcs/1558-closure-to-fn-coercion.html))，例如`|| 8usize`到`fn() -> usize`
+
 `CoerceUnsized<Pointer<U>> for Pointer<T> where T: Unsize<U>`是针对所有指针类型实现的(包括智能指针,如Box和Rc).Unsize仅自动实现,并启用以下转换:
 
 - `[T; n]` => `[T]`
