@@ -10,7 +10,6 @@ pub struct Vec<T> {
     cap: usize,
     len: usize,
 }
-# fn main() {}
 ```
 
 确实这会编译.不幸的是,这是不正确的.首先,编译器会给我们太严格的可变性.因此,如果预期`&Vec<&'a str>`,则无法使用`&Vec<&'static str>`.更重要的是,它会向删除检查器提供不正确的所有权信息,因为它会保守地假设我们不拥有类型`T`的任何值.有关可变性和删除检查的所有详细信息,请参阅有关所有权和生命周期的章节.
@@ -53,24 +52,16 @@ impl<T> Unique<T> {
         self.ptr as *mut T
     }
 }
-
-# fn main() {}
 ```
 
 不幸的是,说明你的价非零(non-zero)的机制是不稳定的,不太可能很快稳定下来.因此,我们只接受打击,使用std的Unique:
 
 ```Rust
-#![feature(ptr_internals)]
-
-use std::ptr::{Unique, self};
-
 pub struct Vec<T> {
     ptr: Unique<T>,
     cap: usize,
     len: usize,
 }
-
-# fn main() {}
 ```
 
 如果你不关心空指针优化,那么你可以使用稳定代码.但是,我们将围绕启用此优化来设计其余代码.应该注意的是,调用`Unique::new`是不安全的,因为在其中放置null是未定义行为.我们的稳定Unique不需要`new`是不安全的,因为它没有对其内容做出任何有趣的保证.

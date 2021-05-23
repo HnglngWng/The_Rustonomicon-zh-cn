@@ -72,7 +72,7 @@ impl<T> DoubleEndedIterator for IntoIter<T> {
 
 impl<T> Drop for IntoIter<T> {
     fn drop(&mut self) {
-        for _ in &mut self.iter {}
+        for _ in &mut *self {}
     }
 }
 
@@ -117,7 +117,7 @@ impl<'a, T> DoubleEndedIterator for Drain<'a, T> {
 
 impl<'a, T> Drop for Drain<'a, T> {
     fn drop(&mut self) {
-        for _ in &mut self.iter {}
+        for _ in &mut *self {}
     }
 }
 

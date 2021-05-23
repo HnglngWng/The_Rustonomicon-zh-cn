@@ -7,10 +7,6 @@
 所以:
 
 ```Rust
-#![feature(alloc, heap_api)]
-
-use std::mem;
-
 impl<T> Vec<T> {
     fn new() -> Self {
         assert!(mem::size_of::<T>() != 0, "We're not ready to handle ZSTs");
@@ -45,8 +41,6 @@ else:
 举个简单的例子,考虑以下代码片段:
 
 ```Rust
-# let x = &mut 0;
-# let y = &mut 0;
 *x *= 7;
 *y *= 3;
 ```
@@ -76,22 +70,18 @@ else:
 好了,这些废话就讲到这里吧,我们来实际分配一些内存:
 
 ```Rust
-use std::alloc::oom;
-
 fn grow(&mut self) {
     // this is all pretty delicate, so let's say it's all unsafe
     unsafe {
-        // current API requires us to specify size and alignment manually.
-        let align = mem::align_of::<T>();
         let elem_size = mem::size_of::<T>();
 
         let (new_cap, ptr) = if self.cap == 0 {
-            let ptr = heap::allocate(elem_size, align);
+            let ptr = Global.allocate(Layout::array::<T>(1).unwrap());
             (1, ptr)
         } else {
             // as an invariant, we can assume that `self.cap < isize::MAX`,
             // so this doesn't need to be checked.
-            let new_cap = self.cap * 2;
+            let new_cap = 2  * self.cap;
             // Similarly this can't overflow due to previously allocating this
             let old_num_bytes = self.cap * elem_size;
 
@@ -104,18 +94,24 @@ fn grow(&mut self) {
             assert!(old_num_bytes <= (isize::MAX as usize) / 2,
                     "capacity overflow");
 
-            let new_num_bytes = old_num_bytes * 2;
-            let ptr = heap::reallocate(self.ptr.as_ptr() as *mut _,
-                                        old_num_bytes,
-                                        new_num_bytes,
-                                        align);
+            let c: NonNull<T> = self.ptr.into();
+            let ptr = Global.grow(c.cast(),
+                                  Layout::array::<T>(self.cap).unwrap(),
+                                  Layout::array::<T>(new_cap).unwrap());
             (new_cap, ptr)
         };
 
-        // If allocate or reallocate fail, we'll get `null` back
-        if ptr.is_null() { oom(); }
+        // If allocate or reallocate fail, oom
+        if ptr.is_err() {
+            handle_alloc_error(Layout::from_size_align_unchecked(
+                new_cap * elem_size,
+                mem::align_of::<T>(),
+            ))
+        }
 
-        self.ptr = Unique::new(ptr as *mut _);
+        let ptr = ptr.unwrap();
+
+        self.ptr = Unique::new_unchecked(ptr.as_ptr() as *mut _);
         self.cap = new_cap;
     }
 }
