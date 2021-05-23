@@ -1,6 +1,6 @@
 # 删除检查Drop Check)
 
-我们已经看到生命周期如何为我们提供一些相当简单的规则,以确保我们永远不会读取悬空引用.然而,到目前为止,我们只是以包容的方式对待 *活得久(outlives)*的关系.也就是说,当我们谈到`'a: '`b时,`'a`与`'b`活得 *完全(exactly)* 一样长是可以的.乍一看,这似乎是一个毫无意义的区别.没有什么与另一个同时被删除,对吧?这就是为什么我们使用下面的`let`语句的脱糖:
+我们已经看到生命周期如何为我们提供一些相当简单的规则,以确保我们永远不会读取悬空引用.然而,到目前为止,我们只是以包容的方式对待 *活得久(outlives)* 的关系.也就是说,当我们谈到`'a: '`b时,`'a`与`'b`活得 *完全(exactly)* 一样长是可以的.乍一看,这似乎是一个毫无意义的区别.没有什么与另一个同时被删除,对吧?这就是为什么我们使用下面的`let`语句的脱糖:
 
 ```Rust
 let x;
@@ -76,15 +76,16 @@ fn main() {
 
 ```Rust
 error[E0597]: `world.days` does not live long enough
-  --> src/main.rs:20:39
+  --> src/main.rs:19:38
    |
-12 |      world.inspector = Some(Inspector(&world.days));
+19 |      world.inspector = Some(Inspector(&world.days));
    |                                       ^^^^^^^^^^ borrowed value does not live long enough
 ...
-23 | }
-   | - `world.days` dropped here while still borrowed
-   |
-   = note: values in a scope are dropped in the opposite order they are created
+22 | }
+   | -
+   | |
+   | `world.days` dropped here while still borrowed
+   | borrow might be used here, when `world` is dropped and runs the destructor for type `World<'_>`
 ```
 
 你可以尝试更改字段的顺序或使用元组而不是结构,它仍然无法编译.
