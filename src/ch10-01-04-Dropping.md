@@ -6,23 +6,29 @@
 
 基本上，我们需要：
 
-- 获取`Arc`的`ArcInner`值
+1. 减少引用计数
 
-- 减少引用计数
+2. 如果数据只剩下一个引用，则：
 
-- 如果数据只剩下一个引用，则：
+3. 原子地隔离数据以防止数据的使用和删除的重新排序，然后：
 
-- 原子地隔离数据以防止数据的使用和删除的重新排序，然后：
+4. 删除内部数据
 
-- 删除内部数据
-
-现在，我们需要减少引用计数。 如果引用计数不等于 1（因为`fetch_sub`返回前一个值），我们还可以通过返回来引入第 3 步：
+首先，我们需要访问 `ArcInner`：
 
 ```Rust
-if self.inner().rc.fetch_sub(1, Ordering::Release) != 1 {
+let inner = unsafe { self.ptr.as_ref() };
+```
+
+现在，我们需要减少引用计数。 为了简化我们的代码，我们还可以在 `fetch_sub` 的返回值（减少它的引用计数之前的值）不等于 `1` 时返回（当我们不是对数据的最后一个引用时会发生这种情况）。
+
+```rust
+if inner.rc.fetch_sub(1, Ordering::???) != 1 {
     return;
 }
 ```
+
+TODO
 
 然后我们需要创建一个原子原子围栏,来防止重新排序数据的使用和删除数据。 如[标准库的`Arc`实现](https://github.com/rust-lang/rust/blob/e1884a8e3c3e813aada8254edfa120e85bf5ffca/library/alloc/src/sync.rs#L1440-L1467)中所述：
 
@@ -61,7 +67,8 @@ unsafe { Box::from_raw(self.ptr.as_ptr()); }
 ```Rust
 impl<T> Drop for Arc<T> {
     fn drop(&mut self) {
-        if self.inner().rc.fetch_sub(1, Ordering::Release) != 1 {
+        let inner = unsafe { self.ptr.as_ref() };
+        if inner.rc.fetch_sub(1, Ordering::Release) != 1 {
             return;
         }
         // This fence is needed to prevent reordering of the use and deletion

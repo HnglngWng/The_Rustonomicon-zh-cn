@@ -8,8 +8,6 @@
 
 这非常简单，因为我们只需要将`ArcInner<T>`框起来，并获得一个指向它的`NonNull<T>`指针。
 
-我们从1开始引用计数器，因为第一个引用是当前引用指针。当`Arc`被克隆或删除时，它会被更新。可以对`NonNull`返回的`Option`调用`unwrap()`,因为`Box::into_raw`保证返回的指针不为空。
-
 ```Rust
 impl<T> Arc<T> {
     pub fn new(data: T) -> Arc<T> {
@@ -23,7 +21,7 @@ impl<T> Arc<T> {
             // It is okay to call `.unwrap()` here as we get a pointer from
             // `Box::into_raw` which is guaranteed to not be null.
             ptr: NonNull::new(Box::into_raw(boxed)).unwrap(),
-            _marker: PhantomData,
+            phantom: PhantomData,
         }
     }
 }
@@ -35,9 +33,9 @@ impl<T> Arc<T> {
 
 这很好，因为:
 
-- 只有当且仅当它是引用该数据的唯一`Arc`时，您才能获得对`Arc`内值的可变引用
+- 只有当且仅当它是引用该数据的唯一`Arc`时，您才能获得对`Arc`内值的可变引用（这只发生在`Drop`中）
 
-- 我们使用原子计数器进行引用计数
+- 我们使用原子进行共享的可变引用计数
 
 ```Rust
 unsafe impl<T: Sync + Send> Send for Arc<T> {}
@@ -46,24 +44,53 @@ unsafe impl<T: Sync + Send> Sync for Arc<T> {}
 
 我们需要限定`T: Sync + Send`，因为如果我们不提供这些边界，就有可能通过`Arc`跨线程边界共享线程不安全的值，这可能会导致数据竞争或不健全。
 
-## 获取`ArcInner`
+例如，如果这些限定不存在，`Arc<Rc<u32>>` 将是 `Sync` 或 `Send`，这意味着你可以从 `Arc` 中克隆出 `Rc` 以通过线程发送它 （不创建一个全新的 `Rc`），这将创建数据竞争，因为 `Rc` 不是线程安全的。
 
-现在，我们要创建一个私有帮助函数`inner()`，它只是返回解引用的`NonNull`指针。
+## 获取`ArcInner`
 
 要将`NonNull<T>`指针解引用为`&T`，我们可以调用`NonNull::as_ref`。 这是不安全的，不像典型的`as_ref`函数，所以我们必须像这样调用它：
 
 ```Rust
-// inside the impl<T> Arc<T> block from before:
-fn inner(&self) -> &ArcInner<T> {
-    unsafe { self.ptr.as_ref() }
-}
+unsafe { self.ptr.as_ref() }
 ```
+
+我们将在此代码中多次使用此代码段（通常使用一个关联的 `let` 绑定）。
 
 这种不安全是没有问题的，因为当这个`Arc`存在时，我们保证内部指针是有效的。
 
+## Deref
+
+好的。 现在我们可以制作`Arc`s（很快就能正确地克隆和销毁它们），但是我们如何获取里面的数据呢?
+
+我们现在需要的是`Deref`的一个实现。
+
+我们需要导入trait：
+
+```rust
+use std::ops::Deref;
+```
+
+这是实现：
+
+```rust
+impl<T> Deref for Arc<T> {
+    type Target = T;
+    fn deref(&self) -> &T {
+        let inner = unsafe { self.ptr.as_ref() };
+        &inner.data
+    }
+}
+```
+
+很简单吧? 这只是对指向`ArcInner<T>`的`NonNull`指针进行解引用，然后获取对内部数据的引用。
+
+## 代码
+
 这是本节的所有代码：
 
-```Rust
+```rust
+ use std::ops::Deref;
+
 impl<T> Arc<T> {
     pub fn new(data: T) -> Arc<T> {
         // We start the reference count at 1, as that first reference is the
@@ -76,17 +103,20 @@ impl<T> Arc<T> {
             // It is okay to call `.unwrap()` here as we get a pointer from
             // `Box::into_raw` which is guaranteed to not be null.
             ptr: NonNull::new(Box::into_raw(boxed)).unwrap(),
-            _marker: PhantomData,
+            phantom: PhantomData,
         }
-    }
-
-    fn inner(&self) -> &ArcInner<T> {
-        // This unsafety is okay because while this Arc is alive, we're
-        // guaranteed that the inner pointer is valid.
-        unsafe { self.ptr.as_ref() }
     }
 }
 
 unsafe impl<T: Sync + Send> Send for Arc<T> {}
 unsafe impl<T: Sync + Send> Sync for Arc<T> {}
+
+
+impl<T> Deref for Arc<T> {
+    type Target = T;
+    fn deref(&self) -> &T {
+        let inner = unsafe { self.ptr.as_ref() };
+        &inner.data
+    }
+}
 ```

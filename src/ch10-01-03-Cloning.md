@@ -4,16 +4,20 @@
 
 基本上，我们需要：
 
-- 获取`Arc`的`ArcInner`值
+1. 增加原子引用计数
 
-- 增加原子引用计数
+2. 从内部指针构造一个`Arc`的新实例
 
-- 从内部指针构造一个`Arc`的新实例
-
-接下来，我们可以按如下方式更新原子引用计数：
+首先，我们需要访问 `ArcInner`：
 
 ```Rust
-self.inner().rc.fetch_add(1, Ordering::Relaxed);
+let inner = unsafe { self.ptr.as_ref() };
+```
+
+我们可以按如下方式更新原子引用计数：
+
+```rust
+ let old_rc = inner.rc.fetch_add(1, Ordering::Relaxed);
 ```
 
 如[标准库的`Arc`克隆实现](https://github.com/rust-lang/rust/blob/e1884a8e3c3e813aada8254edfa120e85bf5ffca/library/alloc/src/sync.rs#L1171-L1181)中所述：
@@ -30,14 +34,26 @@ self.inner().rc.fetch_add(1, Ordering::Relaxed);
 use std::sync::atomic::Ordering;
 ```
 
-在一些人为设计的程序中（例如使用 `mem::forget`），引用计数可能会溢出，但在任何合理的程序中都会发生这种情况是不合理的。
+然而，我们现在在这个实现上有一个问题。 如果有人决定 `mem::forget` 一堆 Arcs 怎么办？ 到目前为止我们编写的代码（以及将要编写的）假设引用计数准确地描绘了内存中有多少 Arcs，但是使用 `mem::forget` 这是错误的。 因此，当越来越多的 Arcs 被从这个克隆出来时，它们没有被 `Drop`, 并且引用计数被递减，我们可能会溢出！ 这将导致释放后使用，这是 **非常糟糕的！**
+
+为了处理这个问题，我们需要检查引用计数没有超过某个任意值（低于 `usize::MAX`，因为我们将引用计数存储为 `AtomicUsize`），然后做 *一些事情* 。
+
+标准库的实现决定,如果引用计数在任何线程上达到`isize::MAX`（大约是`usize ::MAX`的一半) ，就中止程序(因为在正常代码中这是一个非常不可能的情况，如果发生，程序可能会非常退化),假设可能没有大约 20 亿个线程（或在某些 64 位机器上大约 **9 quintillion**）一次增加引用计数。 这就是我们要做的。
+
+实现这种行为非常简单：
+
+```rust
+if old_rc >= isize::MAX {
+    std::process::abort();
+}
+```
 
 然后，我们需要返回`Arc`的一个新实例：
 
 ```Rust
 Self {
     ptr: self.ptr,
-    _marker: PhantomData
+    phantom: PhantomData
 }
 ```
 
@@ -48,12 +64,17 @@ use std::sync::atomic::Ordering;
 
 impl<T> Clone for Arc<T> {
     fn clone(&self) -> Arc<T> {
+        let inner = unsafe { self.ptr.as_ref() };
         // Using a relaxed ordering is alright here as knowledge of the original
         // reference prevents other threads from wrongly deleting the object.
-        self.inner().rc.fetch_add(1, Ordering::Relaxed);
+        inner.rc.fetch_add(1, Ordering::Relaxed);
+        if old_rc >= isize::MAX {
+            std::process::abort();
+        }
+
         Self {
             ptr: self.ptr,
-            _marker: PhantomData,
+            phantom: PhantomData,
         }
     }
 }
