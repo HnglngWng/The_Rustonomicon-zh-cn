@@ -604,8 +604,18 @@ void bar(struct Bar *arg);
 要在Rust中执行此操作,让我们创建自己的opaque类型:
 
 ```Rust
-#[repr(C)] pub struct Foo { _private: [u8; 0] }
-#[repr(C)] pub struct Bar { _private: [u8; 0] }
+#[repr(C)]
+pub struct Foo {
+    _data: [u8; 0],
+    _marker:
+        core::marker::PhantomData<(*mut u8, core::marker::PhantomPinned)>,
+}
+#[repr(C)]
+pub struct Bar {
+    _data: [u8; 0],
+    _marker:
+        core::marker::PhantomData<(*mut u8, core::marker::PhantomPinned)>,
+}
 
 extern "C" {
     pub fn foo(arg: *mut Foo);
@@ -614,7 +624,7 @@ extern "C" {
 # fn main() {}
 ```
 
-通过包含私有字段而不包含构造函数,我们创建了一个opaque类型,我们无法在此模块之外进行实例化.(没有字段的结构可以被任何人实例化.)我们还想在FFI中使用这种类型,所以我们必须添加`#[repr(C)]`.为避免在FFI中使用`()`时受到警告,我们改为使用一个空数组,它与空的(empty)类型一样,但与FFI兼容.
+通过包含z至少一个私有字段并且没有构造函数,我们创建了一个opaque类型,我们无法在此模块之外进行实例化.(没有字段的结构可以被任何人实例化.)我们还想在FFI中使用这种类型,所以我们必须添加`#[repr(C)]`.标记确保编译器不会将结构标记为 `Send`, `Sync` 和 `Unpin` 未应用于该结构。(`*mut u8` 不是 `Send` 或 `Sync`，`PhantomPinned` 不是 `Unpin`)
 
 但是因为我们的`Foo`和`Bar`类型不同,我们将在它们之间获得类型安全性,所以我们不会意外地将指向`Foo`的指针传递给`bar()`.
 
