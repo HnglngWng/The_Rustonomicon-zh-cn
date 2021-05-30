@@ -1,25 +1,32 @@
 # 分配内存(Allocating Memory)
 
-使用Unique会破坏Vec(以及所有std集合)的一个重要特性:空的Vec实际上根本没有分配.所以如果我们不能分配,也不能在`ptr`中放一个空指针,我们在`Vec::new`中做什么?好吧,我们只是放了一些其它的垃圾在里面!
+使用`NonNull`会破坏Vec(以及所有std集合)的一个重要特性:创建一个空的Vec实际上根本没有分配.这与分配零大小的内存块不同，后者是全局分配器不允许的(这会导致未定义的行为！)。所以如果我们不能分配,也不能在`ptr`中放一个空指针,我们在`Vec::new`中做什么?好吧,我们只是放了一些其它的垃圾在里面!
 
-这非常好,因为我们已经将`cap == 0`作为我们无分配的哨兵.我们甚至不需要在几乎任何代码中专门处理它,因为我们通常需要检查`cap > len`或`len > 0`.这里推荐的Rust值是`mem::align_of::<T>()`.Unique为此提供便利:`Unique::dangling()`.有很多地方我们想要使用`dangling`,因为没有真正的分配,但是`null`会使编译器做坏事.
+这非常好,因为我们已经将`cap == 0`作为我们无分配的哨兵.我们甚至不需要在几乎任何代码中专门处理它,因为我们通常需要检查`cap > len`或`len > 0`.这里推荐的Rust值是`mem::align_of::<T>()`. `NonNull`为此提供便利:`NonNull::dangling()`.有很多地方我们想要使用`dangling`,因为没有真正的分配,但是`null`会使编译器做坏事.
 
 所以:
 
 ```Rust
+use std::mem;
+
 impl<T> Vec<T> {
     fn new() -> Self {
         assert!(mem::size_of::<T>() != 0, "We're not ready to handle ZSTs");
-        Vec { ptr: Unique::dangling(), len: 0, cap: 0 }
+        Vec {
+            ptr: NonNull::dangling(),
+            len: 0,
+            cap: 0,
+            _marker: PhantomData,
+        }
     }
 }
 ```
 
 我在那里断言,因为零大小的类型需要在我们的整个代码中进行一些特殊的处理,我想暂时推迟这个问题.如果没有这个断言,我们的一些早期草案将会做一些非常糟糕的事情.
 
-接下来,我们需要弄清楚当我们想要空间时实际要做什么.为此,我们需要使用其余的堆API.这些基本上允许我们直接与Rust的分配器(默认为Unix平台上的`malloc`和Windows上的`HeapAlloc`)对话.
+接下来,我们需要弄清楚当我们想要空间时实际要做什么.为此，我们使用全局分配函数 [`alloc`](../alloc/alloc/fn.alloc.html),[`realloc`](../alloc/alloc/fn.realloc.html) 和 [`dealloc`](../alloc/alloc/fn.dealloc.html)，它们在稳定的 Rust 中可用 [`std::alloc`](../alloc/alloc/index.html)。 在这种类型稳定后，这些函数预计将被弃用，取而代之的是[`std::alloc::Global`](../std/alloc/struct.Global.html) 的方法。
 
-我们还需要一种处理内存不足(OOM)情况的方法.标准库调用`std::alloc::oom()`,后者又调用`oom`langitem,它以特定于平台的方式中止程序.我们中止和不要恐慌的原因是因为展开可能导致分配发生,当你的分配器返回时,"嘿我没有更多的内存",这似乎是一件坏事.
+我们还需要一种处理内存不足(OOM)情况的方法.标准库提供一个函数[`alloc::handle_alloc_error`](../alloc/alloc/fn.handle_alloc_error.html),它将以特定于平台的方式中止程序.我们中止和不要恐慌的原因是因为展开可能导致分配发生,当你的分配器返回时,"嘿我没有更多的内存",这似乎是一件坏事.
 
 当然,这有点傻,因为大多数平台实际上并没有以传统方式耗尽内存.如果你合法地开始耗尽所有内存,你的操作系统可能会通过另一种方式终止应用程序.我们触发OOM的最可能方式是一次请求大量的内存(例如理论地址空间的一半).因此,恐慌可能没什么大不了的,也不会有什么坏事发生.尽管如此,我们仍试图尽可能地像标准库一样,所以我们就杀死整个程序.
 
@@ -70,51 +77,41 @@ else:
 好了,这些废话就讲到这里吧,我们来实际分配一些内存:
 
 ```Rust
-fn grow(&mut self) {
-    // this is all pretty delicate, so let's say it's all unsafe
-    unsafe {
-        let elem_size = mem::size_of::<T>();
+use std::alloc::{self, Layout};
 
-        let (new_cap, ptr) = if self.cap == 0 {
-            let ptr = Global.allocate(Layout::array::<T>(1).unwrap());
-            (1, ptr)
+impl<T> Vec<T> {
+    fn grow(&mut self) {
+        let (new_cap, new_layout) = if self.cap == 0 {
+            (1, Layout::array::<T>(1).unwrap())
         } else {
-            // as an invariant, we can assume that `self.cap < isize::MAX`,
-            // so this doesn't need to be checked.
+            // This can't overflow since self.cap <= isize::MAX.
             let new_cap = 2  * self.cap;
-            // Similarly this can't overflow due to previously allocating this
-            let old_num_bytes = self.cap * elem_size;
 
-            // check that the new allocation doesn't exceed `isize::MAX` at all
-            // regardless of the actual size of the capacity. This combines the
-            // `new_cap <= isize::MAX` and `new_num_bytes <= usize::MAX` checks
-            // we need to make. We lose the ability to allocate e.g. 2/3rds of
-            // the address space with a single Vec of i16's on 32-bit though.
-            // Alas, poor Yorick -- I knew him, Horatio.
-            assert!(old_num_bytes <= (isize::MAX as usize) / 2,
-                    "capacity overflow");
-
-            let c: NonNull<T> = self.ptr.into();
-            let ptr = Global.grow(c.cast(),
-                                  Layout::array::<T>(self.cap).unwrap(),
-                                  Layout::array::<T>(new_cap).unwrap());
-            (new_cap, ptr)
+            // `Layout::array` checks that the number of bytes is <= usize::MAX,
+            // but this is redundant since old_layout.size() <= isize::MAX,
+            // so the `unwrap` should never fail.
+            let new_layout = Layout::array::<T>(new_cap).unwrap();
+            (new_cap, new_layout)
         };
 
-        // If allocate or reallocate fail, oom
-        if ptr.is_err() {
-            handle_alloc_error(Layout::from_size_align_unchecked(
-                new_cap * elem_size,
-                mem::align_of::<T>(),
-            ))
-        }
+        // Ensure that the new allocation doesn't exceed `isize::MAX` bytes.
+        assert!(new_layout.size() <= isize::MAX as usize, "Allocation too large");
 
-        let ptr = ptr.unwrap();
+        let new_ptr = if self.cap == 0 {
+            unsafe { alloc::alloc(new_layout) }
+        } else {
+            let old_layout = Layout::array::<T>(self.cap).unwrap();
+            let old_ptr = self.ptr.as_ptr() as *mut u8;
+            unsafe { alloc::realloc(old_ptr, old_layout, new_layout.size()) }
+        };
 
-        self.ptr = Unique::new_unchecked(ptr.as_ptr() as *mut _);
+        // If allocation fails, `new_ptr` will be null, in which case we abort.
+        self.ptr = match NonNull::new(new_ptr as *mut T) {
+            Some(p) => p,
+            None => alloc::handle_alloc_error(new_layout),
+        };
         self.cap = new_cap;
     }
 }
+# fn main() {}
 ```
-
-这里没什么特别棘手的.只需计算大小和对齐,并进行一些仔细的乘法检查.

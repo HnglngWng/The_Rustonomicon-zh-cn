@@ -10,7 +10,7 @@
 
 ## 分配零大小的类型(Allocating Zero-Sized Types)
 
-因此,如果分配器API不支持零大小的分配,那么我们将分配哪些内容作为分配?`Unique::dangling()`当然!几乎每个具有ZST的操作都是无操作,因为ZST只有一个值,因此不需要考虑存储或加载它们的状态.这实际上扩展到`ptr::read`和`ptr::write`:它们实际上根本不会查看指针.因此,我们永远不需要更改指针.
+因此,如果分配器API不支持零大小的分配,那么我们将分配哪些内容作为分配? `NonNull::dangling()`当然!几乎每个具有ZST的操作都是无操作,因为ZST只有一个值,因此不需要考虑存储或加载它们的状态.这实际上扩展到`ptr::read`和`ptr::write`:它们实际上根本不会查看指针.因此,我们永远不需要更改指针.
 
 但请注意,我们之前对溢出前内存不足的依赖不再适用于零大小的类型.我们必须显式防范零大小类型的容量溢出.
 
@@ -22,43 +22,49 @@ impl<T> RawVec<T> {
         // !0 is usize::MAX. This branch should be stripped at compile time.
         let cap = if mem::size_of::<T>() == 0 { !0 } else { 0 };
 
-        // Unique::dangling() doubles as "unallocated" and "zero-sized allocation"
-        RawVec { ptr: Unique::dangling(), cap: cap }
+        // `NonNull::dangling()` doubles as "unallocated" and "zero-sized allocation"
+        RawVec {
+            ptr: NonNull::dangling(),
+            cap: cap,
+            _marker: PhantomData,
+        }
     }
 
     fn grow(&mut self) {
-        unsafe {
-            let elem_size = mem::size_of::<T>();
+        // since we set the capacity to usize::MAX when T has size 0,
+        // getting to here necessarily means the Vec is overfull.
+        assert!(mem::size_of::<T>() != 0, "capacity overflow");
 
-            // since we set the capacity to usize::MAX when elem_size is
-            // 0, getting to here necessarily means the Vec is overfull.
-            assert!(elem_size != 0, "capacity overflow");
+        let (new_cap, new_layout) = if self.cap == 0 {
+            (1, Layout::array::<T>(1).unwrap())
+        } else {
+            // This can't overflow because we ensure self.cap <= isize::MAX.
+            let new_cap = 2 * self.cap;
 
-            let (new_cap, ptr) = if self.cap == 0 {
-                let ptr = Global.allocate(Layout::array::<T>(1).unwrap());
-                (1, ptr)
-            } else {
-                let new_cap = 2 * self.cap;
-                let c: NonNull<T> = self.ptr.into();
-                let ptr = Global.grow(c.cast(),
-                                      Layout::array::<T>(self.cap).unwrap(),
-                                      Layout::array::<T>(new_cap).unwrap());
-                (new_cap, ptr)
-            };
+            // `Layout::array` checks that the number of bytes is <= usize::MAX,
+            // but this is redundant since old_layout.size() <= isize::MAX,
+            // so the `unwrap` should never fail.
+            let new_layout = Layout::array::<T>(new_cap).unwrap();
+            (new_cap, new_layout)
+        };
 
-            // If allocate or reallocate fail, oom
-            if ptr.is_err() {
-                handle_alloc_error(Layout::from_size_align_unchecked(
-                    new_cap * elem_size,
-                    mem::align_of::<T>(),
-                ))
-            }
+        // Ensure that the new allocation doesn't exceed `isize::MAX` bytes.
+        assert!(new_layout.size() <= isize::MAX as usize, "Allocation too large");
 
-            let ptr = ptr.unwrap();
+        let new_ptr = if self.cap == 0 {
+            unsafe { alloc::alloc(new_layout) }
+        } else {
+            let old_layout = Layout::array::<T>(self.cap).unwrap();
+            let old_ptr = self.ptr.as_ptr() as *mut u8;
+            unsafe { alloc::realloc(old_ptr, old_layout, new_layout.size()) }
+        };
 
-            self.ptr = Unique::new_unchecked(ptr.as_ptr() as *mut _);
-            self.cap = new_cap;
-        }
+        // If allocation fails, `new_ptr` will be null, in which case we abort.
+        self.ptr = match NonNull::new(new_ptr as *mut T) {
+            Some(p) => p,
+            None => alloc::handle_alloc_error(new_layout),
+        };
+        self.cap = new_cap;
     }
 }
 
@@ -66,12 +72,12 @@ impl<T> Drop for RawVec<T> {
     fn drop(&mut self) {
         let elem_size = mem::size_of::<T>();
 
-        // don't free zero-sized allocations, as they were never allocated.
         if self.cap != 0 && elem_size != 0 {
             unsafe {
-                let c: NonNull<T> = self.ptr.into();
-                Global.deallocate(c.cast(),
-                                  Layout::array::<T>(self.cap).unwrap());
+                alloc::dealloc(
+                    self.ptr.as_ptr() as *mut u8,
+                    Layout::array::<T>(self.cap).unwrap(),
+                );
             }
         }
     }
