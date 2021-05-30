@@ -64,7 +64,9 @@ unsafe trait UnsafeOrd {
 
 然后,类型将使用`unsafe`来实现`UnsafeOrd`,表明他们已经确保他们的实现维护了trait所期望的任何契约.在这种情况下,`BTreeMap`内部的Unsafe Rust在信任键类型的`UnsafeOrd`实现是正确的时候是合理的.如果不是,那就是不安全trait实现的错误,这与Rust的安全保证一致.
 
-是否标记trait`unsafe`的决定是API设计选择.Rust传统上避免这样做,因为它使得Unsafe Rust普遍存在,这是不可取的.`Send`和`Sync`被标记为不安全,因为线程安全是一个 *基本属性(fundamental property)* ,不安全的代码不可能希望以它可以防御有bug的`Ord`实现的方式进行防御.类似地,`GlobalAllocator`会保留程序中所有内存的记录,以及在其上构建的`Box`或`Vec`等其他东西. 如果它做了一些奇怪的事情(当它仍然在使用时将相同的内存块分配给另一个请求),那么就没有机会检测到它并对此采取任何措施.
+是否标记trait`unsafe`的决定是API设计选择.安全 trait 更容易实现，但任何依赖于它的不安全代码都必须防范不正确的行为。 将trait标记为`unsafe`会将这一责任转移到实现者身上。Rust传统上避免标记trait`unsafe`,因为它使得Unsafe Rust普遍存在,这是不可取的.
+
+`Send`和`Sync`被标记为不安全,因为线程安全是一个 *基本属性(fundamental property)* ,不安全的代码不可能希望以它可以防御有bug的`Ord`实现的方式进行防御.类似地,`GlobalAllocator`会保留程序中所有内存的记录,以及在其上构建的`Box`或`Vec`等其他东西. 如果它做了一些奇怪的事情(当它仍然在使用时将相同的内存块分配给另一个请求),那么就没有机会检测到它并对此采取任何措施.
 
 是否标记自己的trait`unsafe`的决定取决于相同的考虑.如果`unsafe`代码不能合理地期望防止trait的破坏实现,那么标记trait`unsafe`是一个合理的选择.
 
