@@ -13,7 +13,7 @@ pub fn push(&mut self, elem: T) {
     if self.len == self.cap { self.grow(); }
 
     unsafe {
-        ptr::write(self.ptr.as_ptr().offset(self.len as isize), elem);
+        ptr::write(self.ptr.as_ptr().add(self.len), elem);
     }
 
     // Can't fail, we'll OOM first.
@@ -32,7 +32,7 @@ pub fn pop(&mut self) -> Option<T> {
     } else {
         self.len -= 1;
         unsafe {
-            Some(ptr::read(self.ptr.as_ptr().offset(self.len as isize)))
+            Some(ptr::read(self.ptr.as_ptr().add(self.len)))
         }
     }
 }

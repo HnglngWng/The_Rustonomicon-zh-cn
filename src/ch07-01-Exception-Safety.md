@@ -25,14 +25,14 @@ impl<T: Clone> Vec<T> {
             self.set_len(self.len() + to_push.len());
 
             for (i, x) in to_push.iter().enumerate() {
-                self.ptr().offset(i as isize).write(x.clone());
+                self.ptr().add(i).write(x.clone());
             }
         }
     }
 }
 ```
 
-我们绕过`push`以避免冗余容量和对Vec的`len`检查,我们肯定知道它有容量.逻辑是完全正确的,只是我们的代码有一个微妙的问题:它不是异常安全的!`set_len`,`offset`和`write`都很好;`clone`是我们忽视的(over-looked)恐慌炸弹.
+我们绕过`push`以避免冗余容量和对Vec的`len`检查,我们肯定知道它有容量.逻辑是完全正确的,只是我们的代码有一个微妙的问题:它不是异常安全的!`set_len`,`add`和`write`都很好;`clone`是我们忽视的(over-looked)恐慌炸弹.
 
 克隆完全不受我们控制,完全可以自由恐慌.如果是这样,我们的函数将提前退出,Vec的长度设置得太大.如果查看或删除Vec,将读取未初始化的内存!
 
