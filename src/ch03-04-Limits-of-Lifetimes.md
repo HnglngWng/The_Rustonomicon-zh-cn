@@ -64,7 +64,7 @@ fn main() {
 
 # 不当减少借用(Improperly reduced borrows)
 
-目前无法编译,因为Rust不知道不再需要借用,因此保守地退回到使用整个作用域. 这最终将得到解决.
+下面的代码无法编译,因为Rust不知道不再需要借用,因此保守地退回到使用整个作用域. 这最终将得到解决.
 
 ```Rust
 # use std::collections::HashMap;
