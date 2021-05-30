@@ -17,16 +17,16 @@ let inner = unsafe { self.ptr.as_ref() };
 我们可以按如下方式更新原子引用计数：
 
 ```rust
- let old_rc = inner.rc.fetch_add(1, Ordering::Relaxed);
+let old_rc = inner.rc.fetch_add(1, Ordering::???);
 ```
 
-如[标准库的`Arc`克隆实现](https://github.com/rust-lang/rust/blob/e1884a8e3c3e813aada8254edfa120e85bf5ffca/library/alloc/src/sync.rs#L1171-L1181)中所述：
+但是我们应该在这里使用什么顺序? 我们实际上没有任何在克隆时需要原子同步的代码，因为我们在克隆时不会修改内部值。 因此，我们可以在这里使用Relaxed排序，这意味着没有happens-before关系,而是原子的。 然而，当`Drop` Arc时，我们需要在减少引用计数时进行原子同步。 这在[`Arc`的`Drop`实现一节](ch10-01-04-Dropping.md)中有更多描述。有关原子关系和Relaxed 排序的更多信息，请参阅[原子一节](ch08-03-Atomics.md)。
 
-> 在这里使用宽松的排序是没问题的，因为原始引用的知识可以防止其他线程错误地删除对象。
->
-> 如[Boost文档](https://www.boost.org/doc/libs/1_55_0/doc/html/atomic/usage_examples.html)中所述：
->
->> 始终可以使用 memory_order_relaxed 来增加引用计数器：对对象的新引用只能从现有引用形成，并且将现有引用从一个线程传递到另一个线程必须已经提供了任何所需的同步。
+于是，代码变成了这样：
+
+```rust
+ let old_rc = inner.rc.fetch_add(1, Ordering::Relaxed);
+```
 
 我们需要添加另一个导入以使用`Ordering`：
 
@@ -65,8 +65,9 @@ use std::sync::atomic::Ordering;
 impl<T> Clone for Arc<T> {
     fn clone(&self) -> Arc<T> {
         let inner = unsafe { self.ptr.as_ref() };
-        // Using a relaxed ordering is alright here as knowledge of the original
-        // reference prevents other threads from wrongly deleting the object.
+        // Using a relaxed ordering is alright here as we don't need any atomic
+        // synchronization here as we're not modifying or accessing the inner
+        // data.
         let old_rc = inner.rc.fetch_add(1, Ordering::Relaxed);
         if old_rc >= isize::MAX as usize {
             std::process::abort();
