@@ -23,12 +23,10 @@ let inner = unsafe { self.ptr.as_ref() };
 现在，我们需要减少引用计数。 为了简化我们的代码，我们还可以在 `fetch_sub` 的返回值（减少它的引用计数之前的值）不等于 `1` 时返回（当我们不是对数据的最后一个引用时会发生这种情况）。
 
 ```rust
-if inner.rc.fetch_sub(1, Ordering::???) != 1 {
+if inner.rc.fetch_sub(1, Ordering::Relaxed) != 1 {
     return;
 }
 ```
-
-TODO
 
 然后我们需要创建一个原子原子围栏,来防止重新排序数据的使用和删除数据。 如[标准库的`Arc`实现](https://github.com/rust-lang/rust/blob/e1884a8e3c3e813aada8254edfa120e85bf5ffca/library/alloc/src/sync.rs#L1440-L1467)中所述：
 
